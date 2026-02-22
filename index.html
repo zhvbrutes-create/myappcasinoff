@@ -3,133 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dime App Clone</title>
+    <title>Bivencas Ultimate</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg: #141414;
-            --card: #222222;
+            --bg: #0f0f13;
+            --card: #1a1a23;
             --accent: #3b82f6;
+            --yellow: #ffdd00;
             --text: #ffffff;
-            --gray: #888888;
-            --red: #ef4444;
-            --green: #22c55e;
         }
 
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0; padding: 0; user-select: none;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0; padding: 0;
+            overflow-x: hidden;
         }
 
-        .page { display: none; padding: 15px; padding-bottom: 100px; }
+        /* Навигация сверху */
+        .page { display: none; padding: 15px; padding-bottom: 100px; animation: fadeIn 0.3s; }
         .active { display: block; }
 
-        /* Элементы интерфейса */
-        .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; }
-        .balance-box { background: linear-gradient(135deg, #4f46e5, #3b82f6); padding: 25px; border-radius: 20px; text-align: center; }
-        .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
-        .btn:disabled { background: #444; color: #777; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Сетка игры МИНЫ */
-        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 15px 0; }
-        .mine-cell { aspect-ratio: 1; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .mine-cell.open { background: #444; }
-        .mine-cell.win { background: var(--green); }
-        .mine-cell.lose { background: var(--red); }
+        /* Виджет баланса */
+        .balance-card {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            padding: 25px; border-radius: 20px; text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+
+        /* Игры - сетка */
+        .games-list { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .game-card {
+            background: var(--card); border-radius: 15px; padding: 20px;
+            text-align: center; border: 1px solid #333;
+        }
+        .game-icon { font-size: 40px; display: block; margin-bottom: 10px; }
+
+        /* Нижнее меню */
+        .nav-bar {
+            position: fixed; bottom: 0; width: 100%;
+            background: #16161e; display: flex; justify-content: space-around;
+            padding: 15px 0; border-top: 1px solid #333; z-index: 1000;
+        }
+        .nav-item { text-align: center; font-size: 10px; color: #777; transition: 0.3s; }
+        .nav-item.active-nav { color: var(--accent); }
+        .nav-item span { display: block; font-size: 24px; }
+
+        /* Кнопки */
+        .btn {
+            background: var(--accent); color: white; border: none;
+            padding: 12px 20px; border-radius: 10px; font-weight: bold; width: 100%;
+        }
+        .btn:disabled { background: #333; color: #666; }
 
         /* История */
-        .history-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 14px; }
+        .hist-item {
+            display: flex; justify-content: space-between;
+            padding: 10px; border-bottom: 1px solid #333; font-size: 13px;
+        }
 
-        /* Меню */
-        .nav { position: fixed; bottom: 0; width: 100%; background: #1a1a1a; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; }
-        .nav-item { text-align: center; font-size: 10px; color: var(--gray); }
-        .nav-item.active { color: var(--accent); }
-        .nav-item span { display: block; font-size: 22px; }
+        /* --- РУЛЕТКА --- */
+        .roulette-container { position: relative; width: 260px; height: 260px; margin: 20px auto; }
+        #wheel {
+            width: 100%; height: 100%; border-radius: 50%;
+            border: 8px solid #222; transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1);
+            background: conic-gradient(
+                #059669 0deg 9.7deg, #dc2626 9.7deg 19.4deg, #111 19.4deg 29.1deg,
+                #dc2626 29.1deg 38.8deg, #111 38.8deg 48.5deg, #dc2626 48.5deg 58.2deg
+            ); /* Тут упрощенный градиент для примера */
+        }
+        .pointer {
+            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; border-left: 15px solid transparent;
+            border-right: 15px solid transparent; border-top: 25px solid white; z-index: 10;
+        }
 
-        /* Кости */
-        .dice-box { display: flex; justify-content: center; gap: 20px; font-size: 50px; margin: 20px 0; }
-        input[type="number"] { background: #111; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; width: 80%; }
+        /* --- МИНЫ --- */
+        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+        .cell { aspect-ratio: 1; background: #2a2a35; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .cell.open-win { background: #059669; }
+        .cell.open-lose { background: #dc2626; }
     </style>
 </head>
 <body>
 
-    <!-- ГЛАВНАЯ -->
-    <div id="home" class="page active">
-        <div class="balance-box">
-            <div style="font-size: 12px; opacity: 0.8;">Ваш баланс</div>
-            <div id="balance-val" style="font-size: 32px; font-weight: 800;">0 🪙</div>
+    <!-- Вкладка: Баланс -->
+    <div id="p-balance" class="page active">
+        <div class="balance-card">
+            <div style="font-size: 14px; opacity: 0.7;">Твой баланс</div>
+            <div id="main-balance" style="font-size: 38px; font-weight: bold;">0 🪙</div>
         </div>
         
-        <div class="card" style="margin-top: 15px;">
-            <h3>Ежедневный бонус</h3>
-            <p style="color: var(--gray); font-size: 14px;">+3,333 коинов каждые 4 часа</p>
-            <button id="bonus-btn" class="btn" onclick="claimBonus()">Забрать бонус</button>
-            <div id="bonus-timer" style="text-align: center; margin-top: 5px; font-size: 12px; color: var(--accent);"></div>
+        <div class="game-card">
+            <h3>🎁 Ежедневный бонус</h3>
+            <p>+3,333 коинов каждые 4 часа</p>
+            <button id="btn-bonus" class="btn" onclick="claimBonus()">Забрать бонус</button>
+            <div id="bonus-timer" style="margin-top: 10px; color: var(--accent); font-weight: bold;"></div>
         </div>
 
-        <h3>История игр (Топ 30)</h3>
-        <div class="card" id="history-list">
-            <!-- История -->
+        <h3 style="margin-top: 20px;">Последние 30 игр</h3>
+        <div id="history-list" class="game-card" style="padding: 10px; text-align: left;"></div>
+    </div>
+
+    <!-- Вкладка: Игры -->
+    <div id="p-games" class="page">
+        <div class="games-list">
+            <div class="game-card" onclick="openGame('mines')">
+                <span class="game-icon">💣</span>МИНЫ
+            </div>
+            <div class="game-item game-card" onclick="openGame('roulette')">
+                <span class="game-icon">🎡</span>РУЛЕТКА
+            </div>
+            <div class="game-card" onclick="openGame('dice')">
+                <span class="game-icon">🎲</span>DICE (B7M)
+            </div>
         </div>
     </div>
 
-    <!-- ИГРЫ -->
-    <div id="games" class="page">
-        <div class="card" onclick="showGame('mines')">💣 Mines</div>
-        <div class="card" onclick="showGame('dice')">🎲 7M (Dice)</div>
-    </div>
-
-    <!-- КЛАНЫ -->
-    <div id="clans" class="page">
-        <h3>Кланы</h3>
-        <div class="card">
-            <input type="text" id="clan-name" placeholder="Название клана" style="width: 90%; background: #111; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px;">
-            <button class="btn" onclick="createClan()">Создать свой клан</button>
+    <!-- Вкладка: Кланы -->
+    <div id="p-clans" class="page">
+        <h3>👥 Кланы</h3>
+        <div class="game-card">
+            <input type="text" id="clan-input" placeholder="Название клана" style="width: 80%; padding: 10px; border-radius: 5px; border: none; background: #111; color: white;">
+            <button class="btn" style="margin-top: 10px;" onclick="createClan()">Создать клан</button>
         </div>
-        <div id="clan-list"></div>
+        <div id="clans-list" style="margin-top: 15px;"></div>
     </div>
 
     <!-- ИГРА: МИНЫ -->
-    <div id="game-mines" class="page">
-        <button onclick="switchPage('games')" style="background:none; border:none; color:var(--accent);">← Назад</button>
+    <div id="g-mines" class="page">
+        <button onclick="switchPage('p-games')" style="background:none; color:white; border:none;">← Назад</button>
         <center>
-            <h2 id="mine-multiplier">x1.00</h2>
+            <h2 id="mines-mult">x1.00</h2>
             <div class="mines-grid" id="mines-board"></div>
-            <input type="number" id="mine-bet" value="100">
-            <p>Бомбы: <select id="mine-count"><option>3</option><option>5</option><option>10</option></select></p>
-            <button id="mine-start" class="btn" onclick="startMines()">ИГРАТЬ</button>
-            <button id="mine-cashout" class="btn" style="background:var(--green); display:none;" onclick="cashoutMines()">ЗАБРАТЬ</button>
+            <button id="btn-mine-start" class="btn" onclick="startMines()">СТАРТ (100 🪙)</button>
+            <button id="btn-mine-cash" class="btn" style="display:none; background:#059669;" onclick="cashoutMines()">ЗАБРАТЬ</button>
         </center>
     </div>
 
-    <!-- ИГРА: КОСТИ (7M) -->
-    <div id="game-dice" class="page">
-        <button onclick="switchPage('games')" style="background:none; border:none; color:var(--accent);">← Назад</button>
-        <div class="dice-box"><span id="d1">🎲</span><span id="d2">🎲</span></div>
-        <input type="number" id="dice-bet" value="100">
-        <div style="display: flex; gap: 5px; margin-top: 10px;">
-            <button class="btn" onclick="playDice('less')">< 7 (x2.3)</button>
-            <button class="btn" style="background:var(--green)" onclick="playDice('equal')">7 (x5.8)</button>
-            <button class="btn" onclick="playDice('more')">> 7 (x2.3)</button>
-        </div>
-    </div>
-
-    <!-- НАВИГАЦИЯ -->
-    <div class="nav">
-        <div class="nav-item active" id="n-home" onclick="switchPage('home')"><span>🏠</span>Дом</div>
-        <div class="nav-item" id="n-games" onclick="switchPage('games')"><span>🎮</span>Игры</div>
-        <div class="nav-item" id="n-clans" onclick="switchPage('clans')"><span>👥</span>Кланы</div>
+    <!-- Навигация -->
+    <div class="nav-bar">
+        <div class="nav-item active-nav" id="n-balance" onclick="switchPage('p-balance')"><span>💰</span>Баланс</div>
+        <div class="nav-item" id="n-games" onclick="switchPage('p-games')"><span>🎮</span>Игры</div>
+        <div class="nav-item" id="n-top" onclick="switchPage('p-balance')"><span>🏆</span>Топ</div>
+        <div class="nav-item" id="n-clans" onclick="switchPage('p-clans')"><span>👥</span>Кланы</div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        // --- ДАННЫЕ (LocalStorage) ---
-        let state = JSON.parse(localStorage.getItem('casino_state')) |
-{
+        // Состояние игры (сохраняем в память телефона)
+        let state = JSON.parse(localStorage.getItem('bivencas_v2')) || {
             balance: 5000,
             history: [],
             lastBonus: 0,
@@ -137,189 +167,120 @@
         };
 
         function save() {
-            localStorage.setItem('casino_state', JSON.stringify(state));
-            document.getElementById('balance-val').innerText = state.balance.toLocaleString() + " 🪙";
+            localStorage.setItem('bivencas_v2', JSON.stringify(state));
+            document.getElementById('main-balance').innerText = state.balance.toLocaleString() + " 🪙";
             renderHistory();
         }
 
-        function addHistory(game, amount, win) {
-            let res = win ? "+" + amount : "-" + amount;
-            state.history.unshift({ game, res, time: new Date().toLocaleTimeString() });
-            if (state.history.length > 30) state.history.pop();
-            save();
-        }
-
-        // --- НАВИГАЦИЯ ---
         function switchPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            if(id === 'home') document.getElementById('n-home').classList.add('active');
-            if(id === 'games') document.getElementById('n-games').classList.add('active');
-            if(id === 'clans') document.getElementById('n-clans').classList.add('active');
+            tg.HapticFeedback.impactOccurred('light');
         }
 
-        // --- БОНУС 4 ЧАСА ---
+        // --- БОНУС ---
         function claimBonus() {
             let now = Date.now();
-            let cooldown = 4 * 60 * 60 * 1000;
-            if (now - state.lastBonus < cooldown) return;
-
+            if (now - state.lastBonus < 4 * 3600000) return;
             state.balance += 3333;
             state.lastBonus = now;
-            addHistory("Бонус", 3333, true);
-            tg.HapticFeedback.notificationOccurred('success');
+            state.history.unshift({name: "Бонус", res: "+3333"});
+            save();
         }
 
         setInterval(() => {
-            let now = Date.now();
-            let cooldown = 4 * 60 * 60 * 1000;
-            let btn = document.getElementById('bonus-btn');
-            let timer = document.getElementById('bonus-timer');
-            
-            if (now - state.lastBonus < cooldown) {
+            let diff = 4 * 3600000 - (Date.now() - state.lastBonus);
+            let btn = document.getElementById('btn-bonus');
+            if (diff > 0) {
                 btn.disabled = true;
-                let diff = cooldown - (now - state.lastBonus);
-                let h = Math.floor(diff / 3600000);
-                let m = Math.floor((diff % 3600000) / 60000);
-                timer.innerText = `Доступно через ${h}ч ${m}м`;
+                let h = Math.floor(diff/3600000);
+                let m = Math.floor((diff%3600000)/60000);
+                let s = Math.floor((diff%60000)/1000);
+                document.getElementById('bonus-timer').innerText = `${h}ч ${m}м ${s}с`;
             } else {
                 btn.disabled = false;
-                timer.innerText = "Бонус готов!";
+                document.getElementById('bonus-timer').innerText = "ГОТОВО!";
             }
         }, 1000);
 
-        // --- ИГРА МИНЫ ---
-        let mineGame = { active: false, bombs: [], opened: 0, bet: 0, count: 0 };
-
+        // --- МИНЫ ---
+        let mines = { active: false, board: [], bet: 100, opened: 0 };
         function startMines() {
-            let bet = parseInt(document.getElementById('mine-bet').value);
-            if (bet > state.balance || bet <= 0) return alert("Мало коинов!");
-            
-            state.balance -= bet;
-            mineGame = { active: true, bombs: [], opened: 0, bet: bet, count: parseInt(document.getElementById('mine-count').value) };
-            
-            // Расставляем бомбы
-            while(mineGame.bombs.length < mineGame.count) {
-                let r = Math.floor(Math.random() * 25);
-                if(!mineGame.bombs.includes(r)) mineGame.bombs.push(r);
+            if(state.balance < 100) return;
+            state.balance -= 100;
+            mines = { active: true, board: [], opened: 0 };
+            while(mines.board.length < 5) {
+                let r = Math.floor(Math.random()*25);
+                if(!mines.board.includes(r)) mines.board.push(r);
             }
-
+            document.getElementById('btn-mine-start').style.display = 'none';
+            document.getElementById('btn-mine-cash').style.display = 'block';
             renderMines();
-            document.getElementById('mine-start').style.display = 'none';
-            document.getElementById('mine-cashout').style.display = 'block';
-            document.getElementById('mine-multiplier').innerText = "x1.00";
             save();
         }
 
         function renderMines() {
-            let board = document.getElementById('mines-board');
-            board.innerHTML = '';
+            let b = document.getElementById('mines-board');
+            b.innerHTML = '';
             for(let i=0; i<25; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'mine-cell';
-                cell.onclick = () => clickMine(i);
-                board.ap
-
-            }
-        }
-
-        function clickMine(idx) {
-            if(!mineGame.active) return;
-            let cells = document.getElementsByClassName('mine-cell');
-            if(cells[idx].classList.contains('open')) return;
-
-            if(mineGame.bombs.includes(idx)) {
-                // ВЗРЫВ
-                mineGame.active = false;
-                cells[idx].classList.add('lose');
-                cells[idx].innerText = '💣';
-                addHistory("Mines", mineGame.bet, false);
-                setTimeout(() => { switchPage('games'); document.getElementById('mine-start').style.display = 'block'; document.getElementById('mine-cashout').style.display = 'none'; }, 2000);
-            } else {
-                mineGame.opened++;
-                cells[idx].classList.add('win');
-                cells[idx].innerText = '💎';
-                let mult = 1 + (mineGame.opened * (mineGame.count / 10));
-                document.getElementById('mine-multiplier').innerText = "x" + mult.toFixed(2);
-                tg.HapticFeedback.impactOccurred('light');
+                let c = document.createElement('div');
+                c.className = 'cell';
+                c.onclick = () => {
+                    if(!mines.active || c.innerText !== '') return;
+                    if(mines.board.includes(i)) {
+                        c.classList.add('open-lose'); c.innerText = '💣';
+                        mines.active = false;
+                        state.history.unshift({name:"Мины", res:"-100"});
+                        setTimeout(() => switchPage('p-games'), 1500);
+                    } else {
+                        c.classList.add('open-win'); c.innerText = '💎';
+                        mines.opened++;
+                        document.getElementById('mines-mult').innerText = "x" + (1 + mines.opened*0.4).toFixed(2);
+                        tg.HapticFeedback.impactOccurred('medium');
+                    }
+                };
+                b.appendChild(c);
             }
         }
 
         function cashoutMines() {
-            if(!mineGame.active || mineGame.opened === 0) return;
-            let mult = 1 + (mineGame.opened * (mineGame.count / 10));
-            let win = Math.floor(mineGame.bet * mult);
+            let win = Math.floor(100 * (1 + mines.opened*0.4));
             state.balance += win;
-            addHistory("Mines", win, true);
-            mineGame.active = false;
-            switchPage('games');
-            document.getElementById('mine-start').style.display = 'block';
-            document.getElementById('mine-cashout').style.display = 'none';
-        }
-
-        // --- ИГРА КОСТИ ---
-        function playDice(type) {
-            let bet = parseInt(document.getElementById('dice-bet').value);
-            if(bet > state.balance || bet <= 0) return;
-
-            state.balance -= bet;
-            let d1 = Math.floor(Math.random() * 6) + 1;
-            let d2 = Math.floor(Math.random() * 6) + 1;
-            let sum = d1 + d2;
-            
-            document.getElementById('d1').innerText = d1;
-            document.getElementById('d2').innerText = d2;
-
-            let win = false;
-            let mult = 0;
-
-            if(type === 'less' && sum < 7) { win = true; mult = 2.3; }
-            if(type === 'equal' && sum === 7) { win = true; mult = 5.8; }
-            if(type === 'more' && sum > 7) { win = true; mult = 2.3; }
-
-            if(win) {
-                let winAmt = Math.floor(bet * mult);
-                state.balance += winAmt;
-                addHistory("Dice", winAmt, true);
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                addHistory("Dice", bet, false);
-            }
-        }
-
-        // --- КЛАНЫ ---
-        function createClan() {
-            let name = document.getElementById('clan-name').value;
-            if(name.length < 3) return alert("Имя слишком короткое");
-            state.clans.push(name);
-            renderClans();
+            state.history.unshift({name:"Мины", res:"+"+win});
+            mines.active = false;
+            switchPage('p-games');
+            document.getElementById('btn-mine-start').style.display = 'block';
+            document.getElementById('btn-mine-cash').style.display = 'none';
             save();
         }
 
-        function renderClans() {
-            let list = document.getElementById('clan-list');
-            list.innerHTML = '';
-            state.clans.forEach(c => {
-                list.innerHTML += `<div class="card">🛡️ ${c}</div>`;
+        // --- ОБЩЕЕ ---
+        function openGame(g) { switchPage('g-' + g); if(g === 'mines') {
+            document.getElementById('btn-mine-start').style.display = 'block';
+            document.getElementById('btn-mine-cash').style.display = 'none';
+            renderMines();
+        }}
+
+        function renderHistory() {
+            let l = document.getElementById('history-list');
+            l.innerHTML = '';
+            state.history.slice(0, 30).forEach(h => {
+                l.innerHTML += `<div class="hist-item"><span>${h.name}</span><span style="color:${h.res[0]=='+'?'#059669':'#dc2626'}">${h.res}</span></div>`;
             });
         }
 
-        function renderHistory() {
-            let list = document.getElementById('history-list');
-            list.innerHTML = '';
-            state.history.forEach(h => {
-                list.innerHTML += `<div class="history-item"><span>${h.game} (${h.time})</span><span style="color:${h.res.includes('+') ? 'var(--green)' : 'var(--red)'}">${h.res}</span></div>`;
-            });
-}
+        function createClan() {
+            let n = document.getElementById('clan-input').value;
+            if(n.length > 2) { state.clans.push(n); save(); renderClans(); }
+        }
 
-        function showGame(g) { switchPage('game-' + g); if(g === 'mines') renderMines(); }
+        function renderClans() {
+            let l = document.getElementById('clans-list');
+            l.innerHTML = '';
+            state.clans.forEach(c => l.innerHTML += `<div class="game-card" style="margin-bottom:10px;">🛡️ ${c}</div>`);
+        }
 
-        // Инициализация
-        save();
-        renderClans();
-        renderHistory();
+        save(); renderClans();
     </script>
 </body>
 </html>
-
